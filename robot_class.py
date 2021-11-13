@@ -1,5 +1,6 @@
 from math import *
 import random
+import numpy as np
 
 
 ### ------------------------------------- ###
@@ -34,6 +35,8 @@ class robot:
         self.measurement_noise = measurement_noise
         self.landmarks = []
         self.num_landmarks = 0
+        # Initialize path with initial position
+        self.path = [[self.x, self.y]]
     
     
     # returns a positive, random float
@@ -55,6 +58,7 @@ class robot:
         else:
             self.x = x
             self.y = y
+            self.path.append([x, y])
             return True
 
 
@@ -91,6 +95,34 @@ class robot:
         ##    as list.append([index, dx, dy]), this format is important for data creation done later
         
         ## TODO: return the final, complete list of measurements
+        for index, landmark in enumerate(self.landmarks):
+            rx = self.x
+            ry = self.y
+            
+            lx = landmark[0]
+            ly = landmark[1]
+            
+            # 1. compute dx and dy, the distances between the robot and the landmark
+            # The measurements are with respect to robot's position, 
+            # hence it's position has to be subtracted from the landmarks' position and not the other way around.
+            dx = lx - rx
+            dy = ly - ry
+            
+            # 2. account for measurement noise by *adding* a noise component to dx and dy
+            #    - The noise component should be a random value between [-1.0, 1.0)*measurement_noise
+            #    - Feel free to use the function self.rand() to help calculate this noise component
+            #    - It may help to reference the `move` function for noise calculation
+            dx = dx + self.rand() * self.measurement_noise
+            dy = dy + self.rand() * self.measurement_noise
+            
+            # 3. If either of the distances, dx or dy, fall outside of the internal var, measurement_range
+            #    then we cannot record them; if they do fall in the range, then add them to the measurements list
+            #    as list.append([index, dx, dy]), this format is important for data creation done later
+            if abs(dx) > self.measurement_range or abs(dy) > self.measurement_range:
+                continue
+            
+            measurements.append([index, dx, dy])
+            
         return measurements
 
 
@@ -104,6 +136,21 @@ class robot:
             self.landmarks.append([round(random.random() * self.world_size),
                                    round(random.random() * self.world_size)])
         self.num_landmarks = num_landmarks
+        
+        
+    def make_deterministic_landmarks(self, num_landmarks):
+        self.num_landmarks = num_landmarks
+        
+        rows = round(sqrt(self.num_landmarks))
+        cols = self.num_landmarks - rows
+        
+        self.landmarks = []
+        
+        for row in np.linspace(int(self.world_size * 0.1), int(self.world_size * 0.9), rows):
+            for col in np.linspace(int(self.world_size * 0.1), int(self.world_size * 0.9), cols):
+                self.landmarks.append([row, col])
+                
+        self.landmarks = self.landmarks[:num_landmarks]
 
 
     # called when print(robot) is called; prints the robot's location
